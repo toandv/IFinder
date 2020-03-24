@@ -1,0 +1,213 @@
+package pacemaker
+
+port type Port()
+
+connector type Link2(Port p1, Port p2)
+  define  p1 p2 
+end
+
+connector type Link3(Port p1, Port p2, Port p3)
+  define  p1 p2 p3
+end
+
+connector type Link4(Port p1, Port p2, Port p3, Port p4)
+  define  p1 p2 p3 p4
+end
+
+connector type Link5(Port p1, Port p2, Port p3, Port p4, Port p5)
+  define  p1 p2 p3 p4 p5
+end
+
+connector type Link6(Port p1, Port p2, Port p3, Port p4, Port p5, Port p6)
+  define  p1 p2 p3 p4 p5 p6
+end
+
+connector type Link7(Port p1, Port p2, Port p3, Port p4, Port p5, Port p6, Port p7)
+  define  p1 p2 p3 p4 p5 p6 p7
+end
+
+/*
+ *
+ */
+
+atom type LRI()
+  clock x unit millisecond
+  export port Port vp()
+  export port Port vs()
+  export port Port ap()
+  export port Port ats()
+ 
+  place L1, ASED
+  initial to L1
+  on vp from L1 to L1 do { x = 0; }
+  on vs from L1 to L1 provided (x <= 850 ) do { x = 0; }
+  on ap from L1 to L1 provided (x >= 850 ) do { x = 0; }
+  on ats from L1 to ASED do {}
+  on vp from ASED to L1 do { x = 0; }
+  on vs from ASED to L1 do { x = 0; }
+  
+  invariant inv1 at L1 provided (x <= 850 )
+end
+
+/*
+ *
+ */
+
+atom type AVIURI()
+  clock y unit millisecond
+  clock clk unit millisecond
+  export port Port vp()
+  export port Port vs()
+  export port Port ap()
+  export port Port ats()
+  port Port internalp()
+   
+  place IDLE, AVI, WAITURI
+  initial to IDLE
+  on ats from IDLE to AVI do { y = 0; }
+  on ap from IDLE to AVI do { y = 0; }
+  on vs from AVI to IDLE do { clk = 0; }
+  on vp from AVI to IDLE provided (y >= 150  && clk>=400 ) do { clk = 0; }
+  on internalp from AVI to WAITURI provided (y>= 150  && clk<=400 ) do {}
+  on vp from WAITURI to IDLE provided ( clk>=400 ) do { clk = 0; }
+  on vs from WAITURI to IDLE do { clk = 0; }
+
+  invariant inv1 at AVI provided (y <= 150 )
+  invariant inv2 at WAITURI provided (clk <= 400 )
+end
+
+/*
+ *
+ */
+
+atom type Pvarp()
+  clock z, eps unit millisecond
+  export port Port vp()
+  export port Port vs()
+  export port Port aget()
+  export port Port ats()
+  port Port internalp()
+   
+  place IDLE, PVAB, PVARP, INTER, INTER1
+  initial to IDLE
+
+  on vp from IDLE to PVAB do { z = 0; }
+  on vs from IDLE to PVAB do { z = 0; }
+  on aget from IDLE to INTER do { eps = 0; }
+  on ats from INTER to IDLE do {}
+  on internalp from PVAB to PVARP provided (z >= 50 ) do {}
+  on aget from PVARP to INTER1 do { eps = 0; }
+  on internalp from INTER1 to PVARP provided (z <= 100 ) do {}
+  on internalp from PVARP to IDLE provided (z >= 100 ) do {}
+
+  invariant inv1 at PVAB provided (z <= 50 )
+  invariant inv3 at PVARP provided (z <= 100 )
+  invariant inv4 at INTER provided (eps <= 0 )
+  invariant inv5 at INTER1 provided (eps <= 0 )
+end
+
+/*
+ *
+ */
+
+atom type Vrp()
+
+  clock t, epsv unit millisecond
+  export port Port vp()
+  export port Port vs()
+  export port Port vget()
+  port Port internalp()
+  port Port p()
+  
+  place IDLE, INTER, VRP
+  initial to IDLE
+  on vget from IDLE to INTER do {}
+  on vp from IDLE to VRP do { t = 0; }
+  on vs from INTER to VRP do { t = 0; epsv=0; }
+  on internalp from VRP to IDLE provided (t >= 150 ) do {}
+
+  invariant inv1 at VRP provided (t <= 150 )
+  invariant inv7 at INTER provided (epsv <= 0 )
+end
+
+/*
+ *
+ */
+
+atom type RandomHeart1()
+  clock x1 unit millisecond
+  export port Port xp()
+  export port Port xget()
+
+  place H
+  initial to H
+  on xget from H to H provided (x1 >= 100 ) do { x1 = 0; }
+  on xp from H to H do { x1 = 0; }
+
+  invariant inv1 at H provided (x1 <= 1500 )
+end
+
+/*
+ *
+ */
+
+atom type RandomHeart2()
+  clock x2 unit millisecond
+  export port Port xp()
+  export port Port xget()
+
+  place H
+  initial to H
+
+  on xget from H to H provided (x2 >= 100 ) do { x2 = 0; }
+  on xp from H to H do { x2 = 0; }
+
+  invariant inv1 at H provided (x2 <= 1000 )
+end
+
+/*
+ *
+ */
+
+atom type PURIMonitor()
+  clock tp, epsm
+  export port Port vp()
+  export port Port vs()
+  port Port internalp()
+     
+  place waitv, waitVp, intervalp
+     
+  initial to waitv
+     
+  on vs from waitv to waitVp do { tp = 0; }
+  on vp from waitVp to intervalp do { epsm = 0; }
+  on vs from waitVp to waitVp do { tp = 0; }
+  on internalp from intervalp to waitv do { tp = 0; }
+   
+  invariant inv6 at intervalp provided(epsm <= 0 )
+ end 
+
+/*
+ *
+ */
+
+compound type Pacemaker()
+
+  component RandomHeart1 arhm1()
+  component RandomHeart2 arhm2()
+  component LRI lri()
+  component AVIURI avi()
+  component Pvarp pvarp()
+  component Vrp vrp()
+  component PURIMonitor purim()
+    
+  connector Link5 vsL(vrp.vs, lri.vs, avi.vs, pvarp.vs, purim.vs)  
+  connector Link6 vpL(avi.vp, lri.vp, pvarp.vp, vrp.vp, arhm2.xp,  purim.vp)  
+  
+  connector Link3 atsL(pvarp.ats, lri.ats, avi.ats)  
+  connector Link3 apL(lri.ap, avi.ap, arhm1.xp)  
+  connector Link2 agetL(arhm1.xget, pvarp.aget)
+  connector Link2 vgetL(arhm2.xget, vrp.vget)
+end
+ 
+end

@@ -1,0 +1,45 @@
+package priority_rules_cycle5
+  port type Port()
+
+  connector type RDVX(Port p, Port q)
+    export port Port exp()
+    define p q
+  end
+
+  connector type RDV(Port p, Port q)
+    define p q
+  end
+
+  atom type MyAtomType()
+    export port Port p()
+
+    place INIT, END
+
+    initial to INIT
+
+    on p from INIT to END
+  end
+
+  compound type Level0()
+    component MyAtomType A1()
+    component MyAtomType A2()
+    component MyAtomType A3()
+
+    connector RDVX rdv12(A1.p, A2.p)
+    connector RDVX rdv23(A2.p, A3.p)
+
+    priority prio123 rdv12:* < rdv23:* provided (true)
+    priority prio321 rdv23:* < rdv12:* provided (true)
+
+    export port rdv12.exp as exp12
+    export port rdv23.exp as exp23
+  end
+
+  compound type Level1()
+    component MyAtomType A()
+    component Level0 L()
+
+    connector RDV rdv12 (A.p, L.exp12)
+    // connector RDV rdv23 (A.p, L.exp23)
+  end
+end

@@ -1,0 +1,115 @@
+package preemptive
+
+port type Event()
+  
+connector type SyncOne(Event e1)
+  define e1
+end
+
+connector type SyncTwo(Event e1, Event e2)
+  define e1 e2
+end
+
+/*
+ *
+ */
+
+atom type Task()
+  export port Event awake()
+  export port Event begin()
+  export port Event finish()
+  export port Event preempt()
+  export port Event resum()  // resume is a keyword
+
+  place W, R, E, P
+  initial to W
+  on awake from W to R
+  on begin from R to E
+  on finish from E to W
+  on preempt from E to P
+  on resum from P to E
+end 
+ 
+atom type Task0()
+  export port Event preempt()
+  export port Event resum()
+
+  place E, P
+  initial to E
+  on preempt from E to P
+  on resum from P to E
+end
+
+/*
+ *
+ */
+
+compound type Tasks4()
+  component Task0 t0()
+  component Task t1()
+  component Task t2()
+  component Task t3()
+
+  connector SyncOne a1(t1.awake)
+  connector SyncOne a2(t2.awake)
+  connector SyncOne a3(t3.awake)
+
+  connector SyncTwo bp10(t1.begin, t0.preempt)
+  connector SyncTwo bp20(t2.begin, t0.preempt)
+  connector SyncTwo bp30(t3.begin, t0.preempt)
+  connector SyncTwo bp21(t2.begin, t1.preempt)
+  connector SyncTwo bp31(t3.begin, t1.preempt)
+  connector SyncTwo bp32(t3.begin, t2.preempt)
+
+  connector SyncTwo fr10(t1.finish, t0.resum)
+  connector SyncTwo fr20(t2.finish, t0.resum)
+  connector SyncTwo fr30(t3.finish, t0.resum)
+  connector SyncTwo fr21(t2.finish, t1.resum)
+  connector SyncTwo fr31(t3.finish, t1.resum)
+  connector SyncTwo fr32(t3.finish, t2.resum)
+end
+
+/*
+ *
+ */
+
+compound type Tasks5()
+  component Task0 t0()
+  component Task t1()
+  component Task t2()
+  component Task t3()
+  component Task t4()
+
+  connector SyncOne a1(t1.awake)
+  connector SyncOne a2(t2.awake)
+  connector SyncOne a3(t3.awake)
+  connector SyncOne a4(t4.awake)
+
+  connector SyncTwo bp10(t1.begin, t0.preempt)
+  connector SyncTwo bp20(t2.begin, t0.preempt)
+  connector SyncTwo bp30(t3.begin, t0.preempt)
+  connector SyncTwo bp40(t4.begin, t0.preempt)
+  connector SyncTwo bp21(t2.begin, t1.preempt)
+  connector SyncTwo bp31(t3.begin, t1.preempt)
+  connector SyncTwo bp41(t4.begin, t1.preempt)
+  connector SyncTwo bp32(t3.begin, t2.preempt)
+  connector SyncTwo bp42(t4.begin, t2.preempt)
+  connector SyncTwo bp43(t4.begin, t3.preempt)
+
+  connector SyncTwo fr10(t1.finish, t0.resum)
+  connector SyncTwo fr20(t2.finish, t0.resum)
+  connector SyncTwo fr30(t3.finish, t0.resum)
+  connector SyncTwo fr40(t4.finish, t0.resum)
+  connector SyncTwo fr21(t2.finish, t1.resum)
+  connector SyncTwo fr31(t3.finish, t1.resum)
+  connector SyncTwo fr41(t4.finish, t1.resum)
+  connector SyncTwo fr32(t3.finish, t2.resum)
+  connector SyncTwo fr42(t4.finish, t2.resum)
+  connector SyncTwo fr43(t4.finish, t3.resum)
+end 
+ 
+/*
+ *
+ */
+ 
+end

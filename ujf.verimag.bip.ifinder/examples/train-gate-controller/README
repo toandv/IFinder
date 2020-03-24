@@ -1,0 +1,3 @@
+
+../../bin/ichecker.sh -p tgc -r TGC3 -i inv_1.inv -s prop_1.pro
+

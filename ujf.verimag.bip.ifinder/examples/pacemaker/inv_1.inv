@@ -1,0 +1,28 @@
+# atom control
+
+-a atom-control -ip * -at LRI 
+-a atom-control -ip * -at AVIURI 
+-a atom-control -ip * -at Pvarp 
+-a atom-control -ip * -at Vrp
+-a atom-control -ip * -at RandomHeart1
+-a atom-control -ip * -at RandomHeart2
+-a atom-control -ip * -at PURIMonitor
+
+# atom zone reachability with history clocks
+
+-a zone-reachability -xh * -ip * -at AVIURI 
+-a zone-reachability -xh * -ip * -at Pvarp 
+-a zone-reachability -xh * -ip * -at Vrp 
+-a zone-reachability -xh * -ip * -at RandomHeart1
+-a zone-reachability -xh * -ip * -at RandomHeart2
+-a zone-reachability -xh * -ip * -at PURIMonitor
+-a zone-reachability -xh * -ip * -at LRI 
+
+# compound interaction time
+
+-a interaction-time -ct Pacemaker
+
+# linear
+
+-a linear -ct Pacemaker
+

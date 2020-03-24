@@ -1,0 +1,53 @@
+@cpp(include="unistd.h")
+package test_resume3
+  extern function sleep(int)
+
+  port type Port()
+
+  connector type Sync(Port p, Port q)
+    define p q
+  end
+
+  atom type Atom1(int S)
+    clock x unit second
+ 
+    port Port i()
+    export port Port p()
+
+    place L0, L1
+
+    initial to L0 do { x = 0; }
+ 
+    on i from L0 to L1
+      provided (x == S)
+      eager
+      do { x = 0; sleep(2); }
+      resume (x <= 3)
+
+    on p from L1 to L1
+  end
+
+  atom type Atom2(int S)
+    clock x unit second
+ 
+    export port Port p()
+
+    place L0, L1
+
+    initial to L0 do { x = 0; }
+ 
+    on p from L0 to L1
+      provided (x >= S)
+      eager
+      do { sleep(1); }
+
+  end
+
+  compound type Compound()
+    component Atom1 A(1)
+    component Atom2 B(0), C(6)
+
+    connector Sync C1(A.p, B.p),
+                   C2(A.p, C.p)
+  end
+end

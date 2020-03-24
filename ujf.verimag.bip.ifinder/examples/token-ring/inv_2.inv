@@ -1,0 +1,6 @@
+# atom control
+-at R -a atom-control
+-at R1 -a atom-control
+
+# full zone reachability
+-ct Ring5 -a zone-reachability

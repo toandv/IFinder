@@ -1,0 +1,65 @@
+package tokenring
+
+port type Port()
+
+connector type Link(Port p1, Port p2)
+  define  p1 p2 
+end
+
+/*
+ *
+ */
+
+atom type R()
+  clock x unit second 
+  port Port timeout()
+  export port Port trigger()
+  export port Port token()
+
+  place abst, interm, available
+  initial to abst
+  on trigger from abst to available provided (x >= 2) do { x = 0; }
+  on timeout from available to interm
+  on token from interm to abst  do { x = 0; }
+
+  invariant invR at available provided (x <= 2)   
+end
+
+/*
+ *
+ */
+
+atom type R1()
+  clock x unit second
+  port  Port timeout()
+  export port  Port trigger()
+  export port  Port token()
+
+  place abst, interm, available
+  initial to available
+  on trigger from abst to available provided ( x>=2 ) do { x = 0; }
+  on timeout from available to interm
+  on token from interm to abst do { x = 0; }
+
+  invariant inv1 at available  provided ( x<= 2) 
+end
+
+/*
+ *
+ */
+
+compound type Ring5()
+  component R1 p1() 
+  component R  p2() 
+  component R  p3() 
+  component R  p4() 
+  component R  p5() 
+
+  connector Link send51(p5.token, p1.trigger)
+  connector Link send45(p4.token, p5.trigger)
+  connector Link send34(p3.token, p4.trigger)
+  connector Link send23(p2.token, p3.trigger)
+  connector Link send12(p1.token, p2.trigger)
+end
+  
+end

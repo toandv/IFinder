@@ -1,0 +1,22 @@
+package time_lock2
+  port type Port()
+
+  atom type Atom()
+    clock x unit second
+ 
+    port Port p1()
+
+    place L0, L1
+
+    initial to L0 do { x = 0; }
+ 
+    on p1 from L0 to L1
+      provided (x == 5)
+
+    invariant inv0 at L0 provided (x < 5)
+  end
+
+  compound type Compound()
+    component Atom A()
+  end
+end

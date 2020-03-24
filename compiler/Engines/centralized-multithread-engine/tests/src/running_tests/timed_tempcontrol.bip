@@ -1,0 +1,853 @@
+@cpp(include="tempcontrol-print.hpp,stdio.h", src="tempcontrol-print.cpp")
+package timed_tempcontrol
+  extern function print(string)
+  extern function string print_position(int)
+  extern function string print_command(int)
+  extern function print(int, int, string, string, string, string)
+
+  const data int P = 1000
+
+  port type Port()
+  port type ePort_temperature(int x)
+  port type ePort_pos1(int x)
+  port type ePort_pos2(int x)
+  port type ePort_command1(int x)
+  port type ePort_command2(int x)
+  port type iPort()
+
+  connector type Singleton(Port p)
+    define p
+  end
+
+  connector type RDV_temperature(ePort_temperature p1, ePort_temperature p2)
+    define  p1 p2
+    on p1 p2
+    down {
+      p1.x = p2.x;
+    }
+  end
+
+  connector type RDV_pos1(ePort_pos1 p1, ePort_pos1 p2)
+    define  p1 p2
+    on p1 p2
+    down {
+      p1.x = p2.x;
+    }
+  end
+
+  connector type RDV_pos2(ePort_pos2 p1, ePort_pos2 p2)
+    define  p1 p2
+    on p1 p2
+    down {
+      p1.x = p2.x;
+    }
+  end
+
+  connector type RDV_command1(ePort_command1 p1, ePort_command1 p2)
+    define  p1 p2
+    on p1 p2
+    down {
+      p1.x = p2.x;
+    }
+  end
+
+  connector type RDV_command2(ePort_command2 p1, ePort_command2 p2)
+    define  p1 p2
+    on p1 p2
+    down {
+      p1.x = p2.x;
+    }
+  end
+
+  atom type Reactor()
+    data int tmpw_temperature
+    data int tmpr_pos1
+    data int tmpr_pos2
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    clock x unit millisecond
+    export port ePort_temperature write_temperature(tmpw_temperature)
+    export port ePort_pos1 read_pos1(tmpr_pos1)
+    export port ePort_pos2 read_pos2(tmpr_pos2)
+    export port Port compute()
+
+    place S1, S2, S3, S4, S5, S6, STOP
+    
+    initial to S1
+      do {
+        tmpw_temperature=100;
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on write_temperature
+      from S1 to S3
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on read_pos1
+      from S3 to S4
+      provided ((0<=x)&&(x<=0))
+      eager
+
+    on read_pos2
+      from S4 to S5
+      provided (x == 0)
+      eager
+
+    on compute
+      from S5 to S6
+      provided (((0<=x)&&(x<=period-1)) && ((tmpr_pos1==0)||(tmpr_pos2==0)))
+      delayable
+      do {
+        tmpw_temperature = tmpw_temperature-2;
+      }
+
+    on compute
+      from S5 to S6
+      provided (((0<=x)&&(x<=period-1)) && !((tmpr_pos1==0)||(tmpr_pos2==0)))
+      delayable
+      do {
+        tmpw_temperature = tmpw_temperature+1;
+      }
+
+    on write_temperature
+      from S6 to S3
+      provided ((period<=x)&&(x<=period))
+      eager
+      do {
+        x = 0;
+      }
+
+    internal from S3 to STOP
+      provided (tmpw_temperature > 1000)
+  end
+
+  atom type Rod1()
+    data int tmpw_pos1
+    data int tmpr_command1
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    clock x,y unit millisecond
+    export port ePort_pos1 write_pos1(tmpw_pos1)
+    export port ePort_command1 read_command1(tmpr_command1)
+    export port Port compute_ready()
+    export port Port compute_down()
+    export port Port compute_rest()
+
+    place S1, S2, S3, S4, S5, REST
+
+    initial to S1
+      do {
+        tmpw_pos1=2;
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+        y=0;
+      }
+
+    on write_pos1
+      from S1 to S3
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on read_command1
+      from S3 to S4
+      provided (x == 0 && y <= 10000*period)
+      eager
+
+    on compute_ready
+      from S4 to S5
+      provided ((tmpw_pos1==2)&&((0<=x)&&(x<=period-1)) && (tmpr_command1==1))
+      delayable
+      do {
+        tmpw_pos1 = 0;
+      }
+
+    on compute_ready
+      from S4 to S5
+      provided ((tmpw_pos1==2)&&((0<=x)&&(x<=period-1)) && (tmpr_command1!=1))
+      delayable
+
+    on compute_down
+      from S4 to S5
+      provided ((tmpw_pos1==0)&&((0<=x)&&(x<=period-1)) && (tmpr_command1==0))
+      delayable
+      do {
+        tmpw_pos1 = 1;
+      }
+
+    on compute_down
+      from S4 to S5
+      provided ((tmpw_pos1==0)&&((0<=x)&&(x<=period-1)) && (tmpr_command1!=0))
+      delayable
+
+    on write_pos1
+      from S5 to S3
+      provided ((period<=x)&&(x<=period))
+      eager
+      do {
+        x = 0;
+      }
+
+    on compute_rest
+      from S4 to REST
+      provided ((tmpw_pos1==1)&&((0<=x)&&(x<=(period*3600-1))))
+      delayable
+      do {
+        tmpw_pos1 = 2;
+      }
+
+    on write_pos1
+      from REST to S3
+      provided (((period*3600)<=x)&&(x<=(period*3600)))
+      eager
+      do {
+        x = 0;
+      }
+
+  end
+
+  atom type Rod2()
+    data int tmpw_pos2
+    data int tmpr_command2
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    clock x,y unit millisecond
+    export port ePort_pos2 write_pos2(tmpw_pos2)
+    export port ePort_command2 read_command2(tmpr_command2)
+    export port Port compute_ready()
+    export port Port compute_down()
+    export port Port compute_rest()
+    place S1, S2, S3, S4, S5, REST
+
+    initial to S1
+      do {
+        tmpw_pos2=2;
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+        y=0;
+      }
+
+    on write_pos2
+      from S1 to S3
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on read_command2
+      from S3 to S4
+      provided (x == 0 && y <= 10000*period)
+      eager
+
+    on compute_ready
+      from S4 to S5
+      provided ((tmpw_pos2==2)&&((0<=x)&&(x<=period-1)) && (tmpr_command2!=1))
+      delayable
+
+    on compute_ready
+      from S4 to S5
+      provided ((tmpw_pos2==2)&&((0<=x)&&(x<=period-1)) && (tmpr_command2==1))
+      delayable
+      do {
+        tmpw_pos2 = 0;
+      }
+
+    on compute_down
+      from S4 to S5
+      provided ((tmpw_pos2==0)&&((0<=x)&&(x<=period-1)) && (tmpr_command2!=0))
+      delayable
+
+    on compute_down
+      from S4 to S5
+      provided ((tmpw_pos2==0)&&((0<=x)&&(x<=period-1)) && (tmpr_command2==0))
+      delayable
+      do {
+        tmpw_pos2 = 1;
+      }
+
+    on write_pos2
+      from S5 to S3
+      provided ((period<=x)&&(x<=period))
+      eager
+      do {
+        x = 0;
+      }
+
+    on compute_rest
+      from S4 to REST
+      provided ((tmpw_pos2==1)&&((0<=x)&&(x<=(period*3600-1))))
+      delayable
+      do {
+        tmpw_pos2 = 2;
+      }
+
+    on write_pos2
+      from REST to S3
+      provided (((period*3600)<=x)&&(x<=(period*3600)))
+      eager
+      do {
+        x = 0;
+      }
+  end
+
+  atom type Controller()
+    data int tmpw_command1
+    data int tmpw_command2
+    data int tmpr_temperature
+    data int tmpr_pos1
+    data int tmpr_pos2
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    clock x unit millisecond
+    export port ePort_command1 write_command1(tmpw_command1)
+    export port ePort_command2 write_command2(tmpw_command2)
+    export port ePort_temperature read_temperature(tmpr_temperature)
+    export port ePort_pos1 read_pos1(tmpr_pos1)
+    export port ePort_pos2 read_pos2(tmpr_pos2)
+    export port Port compute_low()
+    export port Port compute_high()
+    export port Port compute_shutdown()
+    export port Port advance()
+    place S1, S2, S3, S4, S5, S6, LOW, HIGH, HIGH_WRITE1, HIGH_WRITE2, HIGH_LATENCY, SHUTDOWN1, SHUTDOWN2, STOP
+
+    initial to S1
+      do {
+        tmpw_command1=0;
+        tmpw_command2=0;
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on write_command1
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on write_command2
+      from S2 to S3
+      provided ((0<=x)&&(x<=0))
+      eager
+
+    on read_temperature
+      from S3 to S4
+      provided (x == 0)
+      eager
+
+    on read_pos1
+      from S4 to S5
+      provided (x == 0)
+      eager
+
+    on read_pos2
+      from S5 to S6
+      provided (x == 0)
+      eager
+
+    on compute_low
+      from S6 to LOW
+      provided ((tmpr_temperature<=(100+(2*2)))&&((0<=x)&&(x<=period-1)))
+      delayable
+      do {
+        tmpw_command1 = 0;
+        tmpw_command2 = 0;
+      }
+
+
+    on write_command1
+      from LOW to S3
+      provided ((tmpr_pos1==0)&&((period<=x)&&(x<=period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on write_command2
+      from LOW to S3
+      provided ((tmpr_pos2==0)&&((period<=x)&&(x<=period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on advance
+      from LOW to S3
+      provided (((tmpr_pos1!=0)&&(tmpr_pos2!=0))&&((period<=x)&&(x<=period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on compute_high
+      from S6 to HIGH
+      provided (((tmpr_temperature>=(1000-2))&&((tmpr_pos1==2)||(tmpr_pos2==2)))&&((0<=x)&&(x<=period-1)) && (tmpr_pos1==2))
+      delayable
+      do {
+        tmpw_command1 = 1;
+      }
+
+    on compute_high
+      from S6 to HIGH
+      provided (((tmpr_temperature>=(1000-2))&&((tmpr_pos1==2)||(tmpr_pos2==2)))&&((0<=x)&&(x<=period-1)) && (tmpr_pos1!=2) && (tmpr_pos2==2))
+      delayable
+      do {
+        tmpw_command2 = 1;
+      }
+
+    on compute_high
+      from S6 to HIGH
+      provided (((tmpr_temperature>=(1000-2))&&((tmpr_pos1==2)||(tmpr_pos2==2)))&&((0<=x)&&(x<=period-1) && (tmpr_pos1!=2) && (tmpr_pos2!=2)))
+      delayable
+
+    on write_command1
+      from HIGH to HIGH_LATENCY
+      provided ((tmpr_pos1==2)&&((period<=x)&&(x<=period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on write_command2
+      from HIGH to HIGH_LATENCY
+      provided (((tmpr_pos1!=2)&&(tmpr_pos2==2))&&((period<=x)&&(x<=period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on advance
+      from HIGH_LATENCY to S3
+      provided (((3*period)<=x)&&(x<=(3*period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on advance
+      from S6 to S3
+      provided (((tmpr_temperature>(100+(2*2)))&&(tmpr_temperature<(1000-2)))&&((period<=x)&&(x<=period)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on compute_shutdown
+      from S6 to SHUTDOWN1
+      provided ((((tmpr_temperature>=(1000-2))&&(tmpr_pos1!=2))&&(tmpr_pos2!=2))&&((0<=x)&&(x<=period-1)))
+      delayable
+      do {
+        tmpw_command1 = 2;
+        tmpw_command2 = 2;
+      }
+
+    on write_command1
+      from SHUTDOWN1 to SHUTDOWN2
+      provided ((period<=x)&&(x<=period))
+      eager
+      do {
+        x = 0;
+      }
+
+    on write_command2
+      from SHUTDOWN2 to STOP
+      provided ((0<=x)&&(x<=0))
+      eager
+  end
+
+  atom type Monitor()
+    data int tmpr_temperature
+    data int tmpr_pos1
+    data int tmpr_pos2
+    data int tmpr_command1
+    data int tmpr_command2
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    data int counter
+    data int first
+    clock x unit millisecond
+    export port ePort_temperature read_temperature(tmpr_temperature)
+    export port ePort_pos1 read_pos1(tmpr_pos1)
+    export port ePort_pos2 read_pos2(tmpr_pos2)
+    export port ePort_command1 read_command1(tmpr_command1)
+    export port ePort_command2 read_command2(tmpr_command2)
+    export port Port start()
+    export port Port compute()
+    export port Port advance()
+
+    place S1, S2, S3, S4, S5, S6, S7, S8, DEADLOCK
+
+    initial to S1
+      do {
+        period=P;
+        phase=0;
+        initTime=10;
+        S=2;
+        R=(initTime-phase)%period;
+        counter=1;
+        first=1;
+        x=0;
+        print("# STEP Reactor/Temp Rod1/Pos Rod2/pos Control/cmd1 Control/cmd2\n");
+      }
+
+    on start
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+      do {
+        x = 0;
+      }
+
+    on read_pos1
+      from S2 to S3
+      provided (x == 0)
+      eager
+
+    on read_pos2
+      from S3 to S4
+      provided (x == 0)
+      eager
+
+    on read_command1
+      from S4 to S5
+      provided (x == 0)
+      eager
+
+    on read_command2
+      from S5 to S6
+      provided (x == 0)
+      eager
+
+    on read_temperature
+      from S6 to S7
+      provided (x == 0)
+      eager
+
+    on compute
+      from S7 to S8
+      provided ((0<=x)&&(x<=period-1)&&(!((tmpr_command1==2)&&(tmpr_command2==2))))
+      delayable
+      do {
+        print(counter, tmpr_temperature, print_position(tmpr_pos1), print_position(tmpr_pos2), print_command(tmpr_command1), print_command(tmpr_command2));
+
+        counter = counter+1;
+      }
+
+    on compute
+      from S7 to DEADLOCK
+      provided ((0<=x)&&(x<=period-1)&&(tmpr_command1==2)&&(tmpr_command2==2))
+      delayable
+
+    on advance
+      from S8 to S2
+      provided ((period<=x)&&(x<=period))
+      eager
+      do {
+        x = 0;
+      }
+  end
+
+  atom type temperature()
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    data int tmpw
+    data int tmpr
+    clock x unit millisecond
+    export port ePort_temperature write(tmpw)
+    export port ePort_temperature read(tmpr)
+    export port Port start()
+
+    place S1, S2, STOP
+
+    initial to S1
+      do {
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on start
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+
+    on write
+      from S2 to S2
+      do {
+        tmpr = tmpw;
+      }
+
+    on read
+      from S2 to S2
+
+    internal from S2 to STOP
+      provided (tmpw > 1000)
+  end
+
+  atom type pos1()
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    data int tmpw
+    data int tmpr
+    clock x unit millisecond
+    export port ePort_pos1 write(tmpw)
+    export port ePort_pos1 read(tmpr)
+    export port Port start()
+
+    place S1, S2
+
+    initial to S1
+      do {
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on start
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+
+    on write
+      from S2 to S2
+      do {
+        tmpr = tmpw;
+      }
+
+    on read
+      from S2 to S2
+  end
+
+  atom type pos2()
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    data int tmpw
+    data int tmpr
+    clock x unit millisecond
+    export port ePort_pos2 write(tmpw)
+    export port ePort_pos2 read(tmpr)
+    export port Port start()
+
+    place S1, S2
+
+    initial to S1
+      do {
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on start
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+
+    on write
+      from S2 to S2
+      do {
+        tmpr = tmpw;
+      }
+
+    on read
+      from S2 to S2
+  end
+
+  atom type command1()
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    data int tmpw
+    data int tmpr
+    clock x unit millisecond
+    export port ePort_command1 write(tmpw)
+    export port ePort_command1 read(tmpr)
+    export port Port start()
+
+    place S1, S2
+
+    initial to S1
+      do {
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on start
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+
+    on write
+      from S2 to S2
+      do {
+        tmpr = tmpw;
+      }
+
+    on read
+      from S2 to S2
+  end
+
+  atom type command2()
+    data int period
+    data int phase
+    data int initTime
+    data int S
+    data int R
+    data int tmpw
+    data int tmpr
+    clock x unit millisecond
+    export port ePort_command2 write(tmpw)
+    export port ePort_command2 read(tmpr)
+    export port Port start()
+
+    place S1, S2
+
+    initial to S1
+      do {
+        period=P;
+        phase=0;
+        initTime=10;
+        S=1;
+        R=(initTime-phase)%period;
+        x=0;
+      }
+
+    on start
+      from S1 to S2
+      provided ((((S*period)-R)<=x)&&(x<=((S*period)-R)))
+      eager
+
+    on write
+      from S2 to S2
+      do {
+        tmpr = tmpw;
+      }
+
+    on read
+      from S2 to S2
+  end
+
+  compound type Top()
+    component Reactor Reactor_instance()
+    component Rod1 Rod1_instance()
+    component Rod2 Rod2_instance()
+    component Controller Controller_instance()
+    component Monitor Monitor_instance()
+    component temperature temperature_instance()
+    component pos1 pos1_instance()
+    component pos2 pos2_instance()
+    component command1 command1_instance()
+    component command2 command2_instance()
+    connector Singleton reactor_compute(Reactor_instance.compute)
+    connector Singleton rod1_compute_ready(Rod1_instance.compute_ready)
+    connector Singleton rod1_compute_down(Rod1_instance.compute_down)
+    connector Singleton rod1_compute_rest(Rod1_instance.compute_rest)
+    connector Singleton rod2_compute_ready(Rod2_instance.compute_ready)
+    connector Singleton rod2_compute_down(Rod2_instance.compute_down)
+    connector Singleton rod2_compute_rest(Rod2_instance.compute_rest)
+    connector Singleton controller_advance(Controller_instance.advance)
+    connector Singleton controller_compute_low(Controller_instance.compute_low)
+    connector Singleton controller_compute_high(Controller_instance.compute_high)
+    connector Singleton controller_compute_shutdown(Controller_instance.compute_shutdown)
+    connector Singleton monitor_start(Monitor_instance.start)
+    connector Singleton monitor_compute(Monitor_instance.compute)
+    connector Singleton monitor_advance(Monitor_instance.advance)
+    connector Singleton temperature_start(temperature_instance.start)
+    connector Singleton pos1_start(pos1_instance.start)
+    connector Singleton pos2_start(pos2_instance.start)
+    connector Singleton command1_start(command1_instance.start)
+    connector Singleton command2_start(command2_instance.start)
+    connector RDV_temperature write_Reactor_temperature(temperature_instance.write, Reactor_instance.write_temperature)
+    connector RDV_pos1 write_Rod1_pos1(pos1_instance.write, Rod1_instance.write_pos1)
+    connector RDV_pos2 write_Rod2_pos2(pos2_instance.write, Rod2_instance.write_pos2)
+    connector RDV_command1 write_Controller_command1(command1_instance.write, Controller_instance.write_command1)
+    connector RDV_command2 write_Controller_command2(command2_instance.write, Controller_instance.write_command2)
+    connector RDV_pos1 read_Reactor_pos1(Reactor_instance.read_pos1, pos1_instance.read)
+    connector RDV_pos2 read_Reactor_pos2(Reactor_instance.read_pos2, pos2_instance.read)
+    connector RDV_command1 read_Rod1_command1(Rod1_instance.read_command1, command1_instance.read)
+    connector RDV_command2 read_Rod2_command2(Rod2_instance.read_command2, command2_instance.read)
+    connector RDV_temperature read_Controller_temperature(Controller_instance.read_temperature, temperature_instance.read)
+    connector RDV_pos1 read_Controller_pos1(Controller_instance.read_pos1, pos1_instance.read)
+    connector RDV_pos2 read_Controller_pos2(Controller_instance.read_pos2, pos2_instance.read)
+    connector RDV_temperature read_Monitor_temperature(Monitor_instance.read_temperature, temperature_instance.read)
+    connector RDV_pos1 read_Monitor_pos1(Monitor_instance.read_pos1, pos1_instance.read)
+    connector RDV_pos2 read_Monitor_pos2(Monitor_instance.read_pos2, pos2_instance.read)
+    connector RDV_command1 read_Monitor_command1(Monitor_instance.read_command1, command1_instance.read)
+    connector RDV_command2 read_Monitor_command2(Monitor_instance.read_command2, command2_instance.read)
+    priority prio_Reactor_pos1 read_Reactor_pos1:* < write_Rod1_pos1:*
+    priority prio_Controller_pos1 read_Controller_pos1:* < write_Rod1_pos1:*
+    priority prio_Monitor_pos1 read_Monitor_pos1:* < write_Rod1_pos1:*
+    priority prio_Reactor_pos2 read_Reactor_pos2:* < write_Rod2_pos2:*
+    priority prio_Controller_pos2 read_Controller_pos2:* < write_Rod2_pos2:*
+    priority prio_Monitor_pos2 read_Monitor_pos2:* < write_Rod2_pos2:*
+    priority prio_Monitor_temperature read_Monitor_temperature:* < write_Reactor_temperature:*
+    priority prio_Controller_temperature read_Controller_temperature:* < write_Reactor_temperature:*
+    priority prio_Rod1_command1 read_Rod1_command1:* < write_Controller_command1:*
+    priority prio_Monitor_command1 read_Monitor_command1:* < write_Controller_command1:*
+    priority prio_Rod2_command2 read_Rod2_command2:* < write_Controller_command2:*
+    priority prio_Monitor_command2 read_Monitor_command2:* < write_Controller_command2:*
+  end
+end

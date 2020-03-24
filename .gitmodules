@@ -1,0 +1,4 @@
+[submodule "compiler"]
+	path = compiler
+	url = https://gricad-gitlab.univ-grenoble-alpes.fr/verimag/bip/compiler.git
+	branch = real-time

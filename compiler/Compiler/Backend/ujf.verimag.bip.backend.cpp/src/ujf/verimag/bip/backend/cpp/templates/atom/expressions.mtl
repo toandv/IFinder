@@ -1,0 +1,215 @@
+[comment encoding = UTF-8 /]
+[module expressions('http://bip2/1.0') /]
+[import ujf::verimag::bip::backend::cpp::templates::naming /]
+
+[query public exportedVarName(aDataDecl : DataDeclaration) : String =
+    '_edata_decl__' + aDataDecl.name
+/]
+
+[query public varName(aData : DataDeclaration) : String =
+	if (aData.oclIsKindOf(ComponentDataParameterDeclaration)) then
+    	'_comp_param__' + aData.name
+	else if (aData.oclIsKindOf(AtomInternalDataDeclaration)) then
+		'_id__' + aData.name
+	else if (aData.oclIsKindOf(ConstDataDeclaration)) then
+		aData.oclAsType(ConstDataDeclaration).varName()
+	else
+		'#error Internal Compiler error : data ' + aData.name + 'not internal data, nor comp param nor package constant'
+	endif endif endif
+/]
+
+[query public varName(aClock : ClockDeclaration) : String =
+	'_id__' + aClock.name
+/]
+
+[query private inGuard(expr : ValuedExpression) : Boolean =
+	if (expr.eContainer()->notEmpty()) then
+		if (expr.eContainer().oclIsKindOf(Guarded)) then
+			true
+		else if expr.eContainer().oclIsKindOf(ValuedExpression) then
+			inGuard(expr.eContainer(ValuedExpression))
+		else
+			false
+		endif endif
+	else
+		false
+	endif
+/]
+
+[query private clocks(expr : Expression) : Set(DirectClockDeclarationReferenceExpression) =
+	expr.getMayReadClocks()
+		->union(expr.getMayWriteClocks())
+/]
+
+[template private speed(expr : ValuedExpression) ? (clocks(expr)->isEmpty()) post(trim())]
+0.0
+[/template]
+
+[template private speed(expr : ValuedExpression) ? (clocks(expr)->notEmpty()) post(trim())]
+#error unsupported operation!
+[/template]
+
+[template private speed(expr : DirectClockDeclarationReferenceExpression) ? (clocks(expr)->notEmpty()) post(trim())]
+[expr.clockDeclaration.varName()/].speed()
+[/template]
+
+[template private speed(expr : BinaryOpExpression) ? (clocks(expr)->notEmpty() and (expr.operator = BinaryOperators::addition or expr.operator = BinaryOperators::subtraction))]
+([speed(expr.left)/]) [expr.operator/] ([speed(expr.right)/])
+[/template]
+ 
+[template private speed(expr : BinaryOpExpression) ? (clocks(expr)->notEmpty() and expr.operator = BinaryOperators::multiplication) post(trim())]
+[if (clocks(expr.left)->isEmpty() and clocks(expr.right)->notEmpty())]
+([generateExpression(expr.left)/])*([speed(expr.right)/])
+[elseif (clocks(expr.left)->notEmpty() and clocks(expr.right)->isEmpty())]
+([speed(expr.left)/])*([generateExpression(expr.right)/])
+[else]
+#error: operation not supported!
+[/if]
+[/template]
+
+[template private speed(expr : BinaryOpExpression) ? (clocks(expr)->notEmpty() and expr.operator = BinaryOperators::division) post(trim())]
+[if (clocks(expr.left)->notEmpty() and clocks(expr.right)->isEmpty())]
+([speed(expr.left)/])/([generateExpression(expr.right)/])
+[else]
+#error: operation not supported!
+[/if]
+[/template]
+
+[template private speed(expr : UnaryOpExpression) ? (clocks(expr)->notEmpty() and expr.operator = UnaryOperators::plus) post(trim())]
+[speed(expr.operand)/]
+[/template]
+
+[template private speed(expr : UnaryOpExpression) ? (clocks(expr)->notEmpty() and expr.operator = UnaryOperators::minus) post(trim())]
+-([speed(expr.operand)/])
+[/template]
+
+[comment
+The following set of template simply generates back the input expression without
+any modification.
+/]
+[template public generateExpression(anExpression : AssignmentExpression)
+	? (anExpression.lhs.oclIsKindOf(DirectDataDeclarationReferenceExpression) or
+		anExpression.lhs.oclIsKindOf(SubDataDeclarationReferenceExpression)) post(trim())]
+[anExpression.lhs.generateExpression() /] = [anExpression.rhs.generateExpression() /]
+[/template]
+
+[template public generateExpression(anExpression : AssignmentExpression)
+	? (anExpression.lhs.oclIsKindOf(DirectClockDeclarationReferenceExpression)) post(trim())]
+[anExpression.lhs.oclAsType(DirectClockDeclarationReferenceExpression).clockDeclaration.varName()/].resetTo([anExpression.rhs.generateExpression()/])
+[/template]
+
+[template public generateExpression(anExpression : AssignmentExpression)
+	? (anExpression.lhs.oclIsKindOf(UnaryOpExpression)) post(trim())]
+[if (anExpression.lhs.oclAsType(UnaryOpExpression).operator = UnaryOperators::quote and
+	anExpression.lhs.oclAsType(UnaryOpExpression).operand.oclIsKindOf(DirectClockDeclarationReferenceExpression))]
+[anExpression.lhs.oclAsType(UnaryOpExpression).operand.oclAsType(DirectClockDeclarationReferenceExpression).clockDeclaration.varName()/].setSpeed([anExpression.rhs.generateExpression()/])
+[else]
+#error: unsupported assignment for left-hand side expression [anExpression.lhs/]
+[/if]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : DirectDataDeclarationReferenceExpression) post(trim())]
+[anExpression.dataDeclaration.varName()/]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : DirectClockDeclarationReferenceExpression) post(trim())]
+[anExpression.clockDeclaration.varName()/].time()
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : BinaryOpExpression)
+	? (inGuard(anExpression) and clocks(anExpression)->notEmpty()) post(trim())]
+[if (anExpression.operator = BinaryOperators::less_than)]
+generateInterval([speed(anExpression.right)/] - [speed(anExpression.left)/], [generateExpression(anExpression.left)/] - [generateExpression(anExpression.right)/], true)
+[elseif (anExpression.operator = BinaryOperators::less_than_or_equal)]
+generateInterval([speed(anExpression.right)/] - [speed(anExpression.left)/], [generateExpression(anExpression.left)/] - [generateExpression(anExpression.right)/], false)
+[elseif (anExpression.operator = BinaryOperators::greater_than)]
+generateInterval([speed(anExpression.left)/] - [speed(anExpression.right)/], [generateExpression(anExpression.right)/] - [generateExpression(anExpression.left)/], true)
+[elseif (anExpression.operator = BinaryOperators::greater_than_or_equal)]
+generateInterval([speed(anExpression.left)/] - [speed(anExpression.right)/], [generateExpression(anExpression.right)/] - [generateExpression(anExpression.left)/], false)
+[elseif (anExpression.operator = BinaryOperators::equal)]
+generateInterval([speed(anExpression.left)/] - [speed(anExpression.right)/], [generateExpression(anExpression.right)/] - [generateExpression(anExpression.left)/], false) && generateInterval([speed(anExpression.right)/] - [speed(anExpression.left)/], [generateExpression(anExpression.left)/] - [generateExpression(anExpression.right)/], false)
+[elseif (anExpression.operator = BinaryOperators::not_equal)]
+#error: unsupported comparison operator '!=' between clock expressions in a guard!
+[else]
+([anExpression.left.generateExpression() /]) [' ' + anExpression.operator + ' '/] ([anExpression.right.generateExpression() /])
+[/if]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : BinaryOpExpression)
+	? (not inGuard(anExpression) or clocks(anExpression)->isEmpty()) post(trim())]
+([anExpression.left.generateExpression() /]) [' ' + anExpression.operator + ' '/] ([anExpression.right.generateExpression() /])
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : FunctionCallExpression) post(trim())]
+[anExpression.functionName /]([for (ve : ValuedExpression | anExpression.parameters) separator(', ')][ve.generateExpression() /][/for])
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : UnaryOpExpression) ? (anExpression.operator <> UnaryOperators::quote) post(trim())]
+[anExpression.operator /] ([anExpression.operand.generateExpression() /])
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : UnaryOpExpression)
+	? (anExpression.operator = UnaryOperators::quote and
+		anExpression.operand.oclIsKindOf(DirectClockDeclarationReferenceExpression)) post(trim())]
+[anExpression.operand.oclAsType(DirectClockDeclarationReferenceExpression).clockDeclaration.varName()/].speed()
+[/template]
+
+[template public generateExpression(anExpression : IfThenElseExpression) post(trim())]
+if ([anExpression.condition.generateExpression()/]) {
+    [for (e : Expression | anExpression._then) ]
+    [e.generateExpression()/][if (not e.oclIsTypeOf(IfThenElseExpression))];[/if]
+    [/for]
+}[if (anExpression._else->notEmpty())] else {
+    [for (e : Expression | anExpression._else) ]
+    [e.generateExpression()/][if (not e.oclIsTypeOf(IfThenElseExpression))];[/if]
+    [/for]
+}
+[/if]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : DirectBooleanExpression) post(trim())]
+[if (anExpression.value)]true[else]false[/if]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : DirectIntegerExpression) post(trim())]
+[anExpression.value.toString()/]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : DirectFloatExpression) post(trim())]
+[anExpression.value.toString()/]
+[/template]
+
+[template public generateExpressionWithoutCast(anExpression : DirectStringExpression) post(trim())]
+[anExpression.value/]
+[/template]
+
+
+[comment
+for <compdecl>.<datadecl>
+/]
+[template public generateExpressionWithoutCast(anExpression : SubDataDeclarationReferenceExpression) ? (anExpression.subDataDeclarationRef.componentDeclaration <> null)]
+[anExpression.subDataDeclarationRef.componentDeclaration.name /].[anExpression.subDataDeclarationRef.forwardDataDeclaration.name /]
+[/template]
+
+[comment
+for <portdecl>.<datadecl>
+/]
+[template public generateExpression(anExpression : SubDataDeclarationReferenceExpression) ? (anExpression.subDataDeclarationRef.portDeclaration <> null)]
+[anExpression.subDataDeclarationRef.portDeclaration.name /].[anExpression.subDataDeclarationRef.forwardDataDeclaration.name /]
+[/template]
+
+[comment THIS IS ANOTHER DEFAULT THAT SHOULD NEVER BE USED /]
+[template public generateExpressionWithoutCast(anExpression : ValuedExpression)]
+INCOMPLETE, MISSING TEMPLATE FOR A SUBTYPE OF 'ValuedExpression' : [anExpression/]
+[/template]
+
+[template public generateExpression(anExpression : ValuedExpression)]
+[generateCast(anExpression.getType(), anExpression.getExpectedType(), generateExpressionWithoutCast(anExpression))/]
+[/template]
+
+[comment THIS IS THE DEFAULT TEMPLATE THAT SHOULD NEVER BE USED. /]
+[template public generateExpression(anExpression : Expression)]
+INCOMPLETE, MISSING TEMPLATE FOR A SUBTYPE OF 'Expression' [anExpression/]
+[/template]
+
+

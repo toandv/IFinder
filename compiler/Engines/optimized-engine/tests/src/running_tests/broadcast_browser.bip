@@ -1,0 +1,80 @@
+package broadcast_browser
+  port type Port()
+
+  connector type Sync(Port p, Port q, Port r, Port s, Port t, Port u)
+    define p' q' r' s' t' u'
+  end
+
+  connector type Broadcast(Port p, Port q, Port r, Port s, Port t, Port u)
+    define p q r s t u'
+  end
+
+  connector type Terminate(Port p, Port q, Port r, Port s, Port t, Port u)
+    define p q r s t u
+  end
+
+  connector type RendezVous(Port p, Port q)
+    define p q
+  end
+
+  atom type Bit()
+    export port Port synchro(), carry_left(), carry_right(), flip(), terminate()
+
+    place ZERO, ONE, CARRY, WAIT_FLIP, TERMINATED
+
+    initial to ZERO
+
+    on carry_right from ZERO      to ONE
+    on carry_right from ONE       to CARRY
+    on carry_left  from CARRY     to ZERO
+    on synchro     from ONE       to WAIT_FLIP
+    on terminate   from ONE       to TERMINATED
+    on flip        from WAIT_FLIP to ONE
+  end
+
+  atom type FlipperBit()
+    export port Port synchro(), carry(), flip(), terminate()
+
+    place ZERO, ONE, SYNC, ZERO_CARRY, TERMINATED
+
+    initial to ZERO
+
+    on flip      from ZERO       to SYNC
+    on flip      from ONE        to ZERO_CARRY
+
+    on carry     from ZERO_CARRY to ZERO
+    on synchro   from SYNC       to ONE
+    on terminate from SYNC       to TERMINATED
+  end
+
+  compound type MyCompoundType()
+    component Bit        bit1()
+    component Bit        bit2()
+    component Bit        bit3()
+    component Bit        bit4()
+    component Bit        bit5()
+    component FlipperBit bit6()
+
+    connector Sync       synchro(bit1.synchro, bit2.synchro, bit3.synchro, bit4.synchro, bit5.synchro, bit6.synchro)
+
+    connector Terminate       terminate(bit1.terminate, bit2.terminate, bit3.terminate, bit4.terminate, bit5.terminate, bit6.terminate)
+
+    connector RendezVous carry56(bit5.carry_right, bit6.carry)
+    connector RendezVous carry45(bit4.carry_right, bit5.carry_left)
+    connector RendezVous carry34(bit3.carry_right, bit4.carry_left)
+    connector RendezVous carry23(bit2.carry_right, bit3.carry_left)
+    connector RendezVous carry12(bit1.carry_right, bit2.carry_left)
+
+    connector Broadcast  flip(bit1.flip, bit2.flip, bit3.flip, bit4.flip, bit5.flip, bit6.flip)
+
+    priority priocarry56 synchro:* < carry56:*
+    priority priocarry45 synchro:* < carry45:*
+    priority priocarry34 synchro:* < carry34:*
+    priority priocarry23 synchro:* < carry23:*
+    priority priocarry12 synchro:* < carry12:*
+
+    priority prioflip flip:* < synchro:*
+
+    priority prioterminate synchro:* < terminate:*
+  end
+end

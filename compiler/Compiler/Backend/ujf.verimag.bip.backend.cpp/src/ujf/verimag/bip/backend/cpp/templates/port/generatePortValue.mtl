@@ -1,0 +1,160 @@
+[comment encoding = UTF-8 /]
+[module generatePortValue('http://bip2/1.0')/]
+
+[import ujf::verimag::bip::backend::cpp::templates::commonBip /]
+[import ujf::verimag::bip::backend::cpp::templates::naming /]
+
+[query public varName(dataParam : PortDataParameterDeclaration) : String =
+    'm_' + dataParam.name/]
+
+[template public generatePortValue(aPortType : PortType, aCMakeList : String, disableSerialization: Boolean)
+    {
+        container : BipPackage = aPortType.eContainer(BipPackage);
+        fullCpp : String = aPortType.fullCppFilePath(aPortType.portValueClassName());
+        fullHpp : String = aPortType.fullHppFilePath(aPortType.portValueClassName());
+        pvCN : String = aPortType.portValueClassName();
+    }
+]
+
+[file (container.cppRoot() + '/' + fullCpp, false, 'UTF-8')]
+#include <[aPortType.relHppFilePath(pvCN)/]>
+
+[if (not disableSerialization) ]
+#include <iostream>
+#include <sstream>
+[/if]
+
+[pvCN/]::[aPortType.genCtorProto()/] : PortValue()[aPortType.genCtorInit()/] {
+}
+
+[if (not disableSerialization) ]
+string [pvCN/]::toString() const {
+    ostringstream oss;
+
+    [for (datadecl : PortDataParameterDeclaration | aPortType.dataParameterDeclarations)]
+    oss << "[datadecl.name/]=" << [datadecl.varName()/] << ';';
+    [/for]
+    return oss.str();
+}
+[/if]
+
+[pvCN/]::~[pvCN/]() {
+}
+
+
+[/file]
+
+[file (container.hppRoot() + '/' + fullHpp, false, 'UTF-8')]
+[startHeaderGuard(fullHpp) /]
+#include <PortValue.hpp>
+
+#include <[aPortType.relHppFilePath()/]>
+
+class AtomExportData;
+class AtomExportPort;
+class AtomInternalPort;
+class AtomExternalPort;
+
+class [pvCN/] : public PortValue {
+public:
+    [aPortType.genCtorProto()/];
+    virtual ~[pvCN/]();
+
+    [if (not disableSerialization)]
+    virtual string toString() const;
+    [/if]
+
+    [if (isOptimEnabled('early-update'))]
+    virtual bool hasUnmodifiedExportData() const { return !mUnmodifiedExportData.empty(); }
+    virtual bool hasUnmodifiedExportPorts() const { return !mUnmodifiedExportPorts.empty(); }
+    virtual bool hasUnmodifiedInternalPorts() const { return !mUnmodifiedInternalPorts.empty(); }
+    virtual bool hasUnmodifiedExternalPorts() const { return !mUnmodifiedExternalPorts.empty(); }
+    virtual const vector<const AtomExportData *> &unmodifiedExportData() const { return mUnmodifiedExportData; }
+    virtual const vector<const AtomExportPort *> &unmodifiedExportPorts() const { return mUnmodifiedExportPorts; }
+    virtual const vector<const AtomInternalPort *> &unmodifiedInternalPorts() const { return mUnmodifiedInternalPorts; }
+    virtual const vector<const AtomExternalPort *> &unmodifiedExternalPorts() const { return mUnmodifiedExternalPorts; }
+    void clearUnmodifiedExportData() { mUnmodifiedExportData.clear(); }
+    void clearUnmodifiedExportPorts() { mUnmodifiedExportPorts.clear(); }
+    void clearUnmodifiedInternalPorts() { mUnmodifiedInternalPorts.clear(); }
+    void clearUnmodifiedExternalPorts()  { mUnmodifiedExternalPorts.clear(); }
+    void addUnmodifiedExportData(const AtomExportData &data) { mUnmodifiedExportData.push_back(&data); }
+    void addUnmodifiedExportPort(const AtomExportPort &port) { mUnmodifiedExportPorts.push_back(&port); }
+    void addUnmodifiedInternalPort(const AtomInternalPort &port) { mUnmodifiedInternalPorts.push_back(&port); }
+    void addUnmodifiedExternalPort(const AtomExternalPort &port) { mUnmodifiedExternalPorts.push_back(&port); }
+    virtual bool unmodifiedInvariant() const { return mUnmodifiedInvariant; }
+    void setUnmodifiedInvariant(bool b) { mUnmodifiedInvariant = b; }
+	[else]
+    virtual bool hasUnmodifiedExportData() const { return false; }
+    virtual bool hasUnmodifiedExportPorts() const { return false; }
+    virtual bool hasUnmodifiedInternalPorts() const { return false; }
+    virtual bool hasUnmodifiedExternalPorts() const { return false; }
+    virtual const vector<const AtomExportData *> &unmodifiedExportData() const { vector<const AtomExportData *> *ptr = NULL; return *ptr; }
+    virtual const vector<const AtomExportPort *> &unmodifiedExportPorts() const { vector<const AtomExportPort *> *ptr = NULL; return *ptr; }
+    virtual const vector<const AtomInternalPort *> &unmodifiedInternalPorts() const { vector<const AtomInternalPort *> *ptr = NULL; return *ptr; }
+    virtual const vector<const AtomExternalPort *> &unmodifiedExternalPorts() const {  vector<const AtomExternalPort *> *ptr = NULL; return *ptr; }
+    virtual bool unmodifiedInvariant() const { return false; }
+    [/if]
+
+    [for (datadecl : PortDataParameterDeclaration | aPortType.dataParameterDeclarations)
+         before('\n    // get/set for data.\n')
+         separator('\n')]
+    const [datadecl.dataType.typeName()/]& get_[datadecl.name/]() const;
+    [if (not datadecl.const)]
+    [datadecl.dataType.typeName()/]& get_[datadecl.name/]();
+    void set_[datadecl.name/](const [datadecl.dataType.typeName()/] &_[datadecl.varName()/]);
+    [/if]
+    [/for]
+
+private:
+    [for (datadecl : PortDataParameterDeclaration | aPortType.dataParameterDeclarations)
+         before('    // data fields from Port type.\n')]
+    [if (datadecl.const)]const [/if][datadecl.dataType.typeName()/] &[datadecl.varName()/];
+    [/for]
+
+    [if (isOptimEnabled('early-update'))]
+    vector<const AtomExportData *> mUnmodifiedExportData;
+    vector<const AtomExportPort *> mUnmodifiedExportPorts;
+    vector<const AtomInternalPort *> mUnmodifiedInternalPorts;
+    vector<const AtomExternalPort *> mUnmodifiedExternalPorts;
+    bool mUnmodifiedInvariant;
+	[/if]
+}; 
+
+
+[for (datadecl : PortDataParameterDeclaration | aPortType.dataParameterDeclarations)
+     before('\n    // get/set for data.\n')
+     separator('\n')]
+inline
+const [datadecl.dataType.typeName()/]& [pvCN/]::get_[datadecl.name/]() const {
+    return [datadecl.varName()/];
+}
+[if (not datadecl.const)]
+inline
+[datadecl.dataType.typeName()/]& [pvCN/]::get_[datadecl.name/]() {
+    return [datadecl.varName()/];
+}
+inline
+void [pvCN/]::set_[datadecl.name/](const [datadecl.dataType.typeName()/] &_[datadecl.varName()/]) {
+    [datadecl.varName()/] = _[datadecl.varName()/];
+}
+[/if]
+[/for]
+
+
+[endHeaderGuard(fullHpp) /]
+[/file]
+
+[file (aCMakeList, true, 'UTF-8')]
+list (APPEND PORT_FILES [fullCpp /]
+                        [fullHpp /])
+[/file]
+[/template]
+
+[template private genCtorProto(aPortType : PortType) post(trim())]
+[aPortType.portValueClassName()/]([for (datadecl : PortDataParameterDeclaration | aPortType.dataParameterDeclarations) separator(', ')][if (datadecl.const)]const [/if][datadecl.dataType.typeName()/] &_[datadecl.varName()/][/for])
+[/template]
+
+
+[template private genCtorInit(aPortType : PortType) post(trim())]
+[for (datadecl : PortDataParameterDeclaration | aPortType.dataParameterDeclarations) before(', ') separator(', ')] [datadecl.varName()/](_[datadecl.varName()/])[/for]
+[/template]

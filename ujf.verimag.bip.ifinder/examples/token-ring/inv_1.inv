@@ -1,0 +1,15 @@
+# atom control
+-at R -a atom-control
+-at R1 -a atom-control
+
+# atom zone reachability with history clocks
+-at R -a zone-reachability -xh *
+-at R1 -a zone-reachability -xh *
+
+# trap
+-ct Ring5 -a trap
+
+# compound interaction time
+-ct Ring5 -a interaction-time
+
+

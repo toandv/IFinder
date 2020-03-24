@@ -1,0 +1,32 @@
+@cpp(include="unistd.h")
+package test_resume_error
+  extern function sleep(int)
+
+  port type Port()
+
+  atom type Atom()
+    clock x unit second
+ 
+    port Port p1(), p2(), p3()
+
+    place L0, L1, L2
+
+    initial to L0 do { x = 0; }
+ 
+    on p1 from L0 to L1
+      provided (x == 5)
+      do { x = 0; sleep(3); }
+      resume (x <= 2)
+
+    on p2 from L1 to L2
+      provided (x <= 10)
+      eager
+
+    invariant inv0 at L0 provided (x <= 5)
+    invariant inv1 at L1 provided (x <= 4)
+  end
+
+  compound type Compound()
+    component Atom A()
+  end
+end

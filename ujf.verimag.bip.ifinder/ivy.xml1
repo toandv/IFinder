@@ -1,0 +1,53 @@
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+
+    <info
+        organisation="ujf.verimag.bip"
+        module="ujf.verimag.bip.ifinder">
+    </info>
+
+    <configurations>
+      <include file="../compiler/distribution/configurations.xml"/>
+    </configurations>
+
+    <dependencies>
+        <dependency name="ujf.verimag.bip.parser" rev="latest.integration"></dependency>
+        <dependency name="ujf.verimag.bip.metamodel" rev="latest.integration"></dependency>
+        <dependency name="ujf.verimag.bip.instantiator" rev="latest.integration"></dependency>
+        <dependency name="ujf.verimag.bip.error" rev="latest.integration"></dependency>
+        <dependency name="ujf.verimag.bip" rev="latest.integration"></dependency>
+	
+	<!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
+	<dependency org="commons-cli" name="commons-cli" rev="1.3.1"/> 
+	
+	<!--  https://mvnrepository.com/artifact/org.ow2.sat4j/org.ow2.sat4j.core -->
+	<dependency org="org.ow2.sat4j" name="org.ow2.sat4j.core" rev="2.3.5"/> 
+	
+	<!-- simplify -->
+
+	<dependency name="simplify" rev="" conf="Linux.x86_64->default">
+	  <artifact name="simplify" type="native" ext="bin" conf="Linux.x86_64"
+		    url="file://${basedir}/externals/simplify_1.0/Linux.x86_64/simplify.bin"/>
+	</dependency>
+	
+	<!-- z3_4.6.0 -->
+	
+        <dependency name="com.microsoft.z3" rev="">
+          <artifact name="com.microsoft.z3" type="jar"
+		    url="file://${basedir}/externals/z3_4.6.0/com.microsoft.z3.jar"/>
+	</dependency>
+	
+	<dependency name="libz3java" rev="" conf="Linux.x86_64->default">
+	  <artifact name="libz3java" type="native" ext="so" conf="Linux.x86_64" 
+		    url="file://${basedir}/externals/z3_4.6.0/Linux.x86_64/libz3java.so"
+		    />
+	</dependency>
+	
+	<dependency name="libz3" rev="" conf="Linux.x86_64->default">
+	  <artifact name="libz3" type="native" ext="so" conf="Linux.x86_64"
+		    url="file://${basedir}/externals/z3_4.6.0/Linux.x86_64/libz3.so"/>
+	</dependency>
+    </dependencies>
+
+</ivy-module>
+

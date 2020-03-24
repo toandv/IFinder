@@ -1,0 +1,16 @@
+# atom control
+-at Train -a atom-control -ip *
+-at Gate  -a atom-control
+
+# compound interaction time
+-ct TGC3 -a interaction-time
+
+# compound traps
+-ct TGC3 -a trap
+
+# compound linear 
+-ct TGC3 -a linear
+
+# zone reachability  
+-at Gate -a zone-reachability
+

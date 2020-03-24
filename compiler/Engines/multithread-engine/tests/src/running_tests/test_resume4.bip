@@ -1,0 +1,25 @@
+package test_resume4
+  port type Port()
+
+  atom type Atom()
+    clock x unit second
+ 
+    port Port p()
+
+    place L0, L1, L2
+
+    initial to L0 do { x = 0; }
+      resume (x <= 2)
+      
+ 
+    on p from L0 to L1
+      provided (x <= 3)
+      eager
+
+    invariant inv0 at L0 provided (x <= 3)
+  end
+
+  compound type Compound()
+    component Atom A()
+  end
+end

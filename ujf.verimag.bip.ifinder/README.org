@@ -1,0 +1,44 @@
+
+* Requirements
+
+  Linux.x86_64 
+
+  Java ?
+
+
+* Installation
+  
+** extract IFinder from git
+
+   $ git clone -b real-time-marius --recurse-submodules \
+       git@gricad-gitlab.univ-grenoble-alpes.fr:verimag/bip/IFinder.git
+
+** build dependent IFinder/compiler
+
+   $ cd IFinder/compiler/distribution
+
+   $ ./wrap.sh
+
+** build IFinder 
+
+   $ cd IFinder/ujf.verimag.bip.ifinder 
+
+   $ ant -lib ../compiler/distribution/lib jar
+
+** configure executable paths
+
+   $ chmod u+x IFinder/ujf.verimag.bip.ifinder/cli-lib/*.bin 
+
+   $ chmod u+x IFinder/ujf.verimag.bip.ifinder/cli-lib/*.so
+
+   $ export PATH=$PATH:IFinder/ujf.verimag.bip.ifinder/cli-lib
+
+   $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:IFinder/ujf.verimag.bip.ifinder/cli-lib
+
+** run IFinder
+    
+   $ cd IFinder/ujf.verimag.bip.ifinder/examples/.../
+
+   $ ../../bin/ifinder.sh -h
+
+   $ ../../bin/ichecker.sh -h   

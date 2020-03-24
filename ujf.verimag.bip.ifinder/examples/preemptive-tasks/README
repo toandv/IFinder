@@ -1,0 +1,5 @@
+
+../../bin/ichecker.sh -p preemptive -r Tasks4 -i tasks4-scheme.inv -s tasks4-mutex.pro
+
+../../bin/ichecker.sh -p preemptive -r Tasks5 -i tasks5-scheme.inv -s tasks5-mutex.pro
+

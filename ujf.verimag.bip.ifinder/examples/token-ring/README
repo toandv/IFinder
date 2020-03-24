@@ -1,0 +1,4 @@
+
+../../bin/ichecker.sh -p tokenring -r Ring5 -i inv_1.inv -s prop_1.pro
+
+../../bin/ichecker.sh -p tokenring -r Ring5 -i inv_2.inv -s prop_1.pro

@@ -1,0 +1,22 @@
+package clock_speed
+  port type Port()
+
+  atom type Atom()
+    clock x,y unit millisecond
+ 
+    port Port p1(), p2(), p3()
+
+    place L0
+
+    initial to L0 do { x = 0; y = 0; x' = 2.0; y' = 0.5; }
+ 
+    on p1 from L0 to L0
+      provided (x == 20 && y <= 1000)
+      eager
+      do { x = 0; }
+  end
+
+  compound type Compound()
+    component Atom A()
+  end
+end

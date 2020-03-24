@@ -1,0 +1,5 @@
+<project  name="ujf.verimag.bip.ifinder" default="compile">
+        <property file="build.properties" />
+	<import file="${distribution.dir}/common.xml" />
+</project>
+

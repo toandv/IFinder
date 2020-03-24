@@ -1,0 +1,2 @@
+
+../../bin/ichecker.sh -p philo -r Philo3 -i philo3-scheme.inv -s philo3-deadlock.pro

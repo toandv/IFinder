@@ -1,0 +1,12 @@
+
+Guest Expression Lexer/Parser
+
+- generated with ANTLR 3.5.2 (the same as for the BIP compiler...)
+
+  $ java -jar compiler/Compiler/Frontend/ujf.verimag.bip.parser/\
+  externals/antlr-3.5.2-complete.jar Guest.g
+
+- the above could be part of the build process, using an antlr3-ant task...
+
+- the use of a newer version of ANTLR runtime (e.g., 4.7.1) had clashed
+  with the version already used for the BIP compiler

@@ -1,0 +1,3 @@
+
+../../bin/ichecker.sh -p pacemaker -r Pacemaker -i inv_1.inv -s prop_1.pro
+

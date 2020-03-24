@@ -1,0 +1,86 @@
+package philo
+
+  port type Event()
+
+  connector type SyncTwo(Event e1, Event e2)
+    define e1 e2
+  end    
+
+  connector type SyncThree(Event e1, Event e2, Event e3)
+    define e1 e2 e3
+  end
+
+  /*
+   * left/right dining philosopher
+   */
+   
+  atom type Philo_LR()
+
+    export port Event takeL()
+    export port Event takeR()
+    export port Event put()
+
+    place W, H, E
+
+    initial to W
+    on takeL from W to H
+    on takeR from H to E
+    on put from E to W
+  end
+
+  /*
+   * right/left dining philosopher
+   */
+ 
+ atom type Philo_RL()
+
+    export port Event takeL()
+    export port Event takeR()
+    export port Event put()
+
+    place W, H, E
+
+    initial to W
+    on takeR from W to H
+    on takeL from H to E
+    on put from E to W
+  end
+
+  /*
+   * fork
+   */
+
+  atom type Fork()
+    export port Event take()
+    export port Event put()
+
+    place F, B
+
+    initial to F
+    on take from F to B
+    on put from B to F
+  end
+
+  /*
+   * 
+   */
+   
+  compound type Philo3()
+    component Philo_RL p0()
+    component Philo_LR p1()
+    component Philo_LR p2()
+    component Fork f0()
+    component Fork f1()
+    component Fork f2()
+    connector SyncTwo p0f0(p0.takeR, f0.take)
+    connector SyncTwo p0f1(p0.takeL, f1.take)
+    connector SyncTwo p1f1(p1.takeR, f1.take)
+    connector SyncTwo p1f2(p1.takeL, f2.take)
+    connector SyncTwo p2f2(p2.takeR, f2.take)
+    connector SyncTwo p2f0(p2.takeL, f0.take)
+    connector SyncThree e0(p0.put, f0.put, f1.put)
+    connector SyncThree e1(p1.put, f1.put, f2.put)
+    connector SyncThree e2(p2.put, f2.put, f0.put)
+  end
+
+end

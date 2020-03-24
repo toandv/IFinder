@@ -1,0 +1,10 @@
+# atom control invariants
+-at Philo_LR -a atom-control
+-at Philo_RL -a atom-control
+-at Fork -a atom-control
+
+# compound traps
+#-ct Philo3 -a trap 
+
+# linear
+-ct Philo3 -a linear
